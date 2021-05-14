@@ -38,6 +38,8 @@ public class ServiceImpl implements Service {
 	// base url until the ? comes from the application properties file
 	@Value("${calanderByPinBaseUrl}")
 	String calanderByPinBaseUrl;
+	@Value("${calanderByDistrictBaseUrl}")
+	String calanderByDistrictBaseUrl;
 
 	/**
 	 * Service implementation method
@@ -46,10 +48,19 @@ public class ServiceImpl implements Service {
 	 */
 	@Override
 	public List<CenterWrap> getFilteredCentersByPincode(Integer pincode, String date) {
-		
+
 		// will always be a size 1 list
-		List<CenterWrap> centerWrapList = fetchCentersFromApi(pincode, date);
-		
+		List<CenterWrap> centerWrapList = fetchCentersFromApiPincode(pincode, date, calanderByPinBaseUrl);
+
+		return filterResult(centerWrapList);
+
+	}
+
+	/**
+	 * @param centerWrapList
+	 * @return
+	 */
+	private List<CenterWrap> filterResult(List<CenterWrap> centerWrapList) {
 		// perform business logic here: filtering based on required params
 		/**
 		 * Filter based on: 
@@ -60,9 +71,9 @@ public class ServiceImpl implements Service {
 		 * 			available_capacity > 0
 		 */
 		// centerwrap is itself a list
-		
+
 		List<Center> centers = centerWrapList.get(0).getCenters();
-		
+
 		// Step 1 
 		// filter sessions based on capacity and vaccine 
 		ListIterator<Center> citer = centers.listIterator();
@@ -70,23 +81,22 @@ public class ServiceImpl implements Service {
 			Center dupCenter = citer.next();
 			// loop in this duplicate thing and do filter and all and pacca replace the og
 			List<Session> a = dupCenter.getSessions().stream()
-			.filter(session -> session.getAvailableCapacity() > 0)
-			.filter(session -> "COVISHIELD".equals(session.getVaccine()))
-			.collect(Collectors.toList());
+					.filter(session -> session.getAvailableCapacity() > 0)
+					.filter(session -> "COVISHIELD".equals(session.getVaccine()))
+					.collect(Collectors.toList());
 			dupCenter.setSessions(a);
-			
+
 			citer.set(dupCenter);
 		}
-		
+
 		// step 2
 		// only if a center has session length > 0 keep it
 		List<Center> newCenters = centers.stream()
-		.filter(center -> center.getSessions().size() > 0).collect(Collectors.toList());
-		
+				.filter(center -> center.getSessions().size() > 0).collect(Collectors.toList());
+
 		CenterWrap cw = new CenterWrap();
 		cw.setCenters(newCenters);
 		return new ArrayList<CenterWrap>(Arrays.asList(cw));
-
 	}
 
 	/**
@@ -97,19 +107,54 @@ public class ServiceImpl implements Service {
 	 * @param date
 	 * @return
 	 */
-	private List<CenterWrap> fetchCentersFromApi(Integer pincode, String date) {
+	private List<CenterWrap> fetchCentersFromApiPincode(Integer pincode, String date, String baseUrl) {
 		// format the given date and set current date if not specified
 		//null check not required for requestDate
 		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
 		String formattedDate = convertToDate(date).format(formatter);
 
 		String url =
-				calanderByPinBaseUrl
+				baseUrl
 				+ "?pincode="
 				+ pincode
 				+"&date="
 				+ formattedDate;
 
+		HttpHeaders headers = new HttpHeaders();
+		headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+
+
+		headers.add("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36");
+		HttpEntity <String> entity = new HttpEntity<String>("", headers);
+
+		ResponseEntity<CenterWrap> response = restTemplate.exchange(url,
+				HttpMethod.GET, entity, CenterWrap.class);
+
+		// O(1) for asList
+		List<CenterWrap> centersList = Arrays.asList(response.getBody());
+		return centersList;
+	}
+	/**
+	 * Helper
+	 * Make the API call to get the centers for the given pincode and date (7 day window)
+	 * 
+	 * @param pincode
+	 * @param date
+	 * @return
+	 */
+	private List<CenterWrap> fetchCentersFromApiDistricts(Integer pincode, String date, String baseUrl) {
+		// format the given date and set current date if not specified
+		//null check not required for requestDate
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+		String formattedDate = convertToDate(date).format(formatter);
+		
+		String url =
+				baseUrl
+				+ "?district_id="
+				+ pincode
+				+"&date="
+				+ formattedDate;
+		
 		HttpHeaders headers = new HttpHeaders();
 		headers.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
 		
@@ -130,9 +175,11 @@ public class ServiceImpl implements Service {
 	 * refer Service interface for documentation
 	 */
 	@Override
-	public List<CenterWrap> getFilteredCentersByDistrictId(Integer pincode, String date) {
-		// TODO Auto-generated method stub
-		return null;
+	public List<CenterWrap> getFilteredCentersByDistrictId(Integer district, String date) {
+		// will always be a size 1 list
+		List<CenterWrap> centerWrapList = fetchCentersFromApiDistricts(district, date, calanderByDistrictBaseUrl);
+
+		return filterResult(centerWrapList);
 	}
 
 

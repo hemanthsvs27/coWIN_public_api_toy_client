@@ -26,7 +26,6 @@ public interface Service {
 	List<CenterWrap> getFilteredCentersByPincode(Integer pincode, String date);
 	
 	/**
-	 * TODO
 	 * @param pincode
 	 * @param requestDate
 	 * @return List<Center>
@@ -36,5 +35,5 @@ public interface Service {
 	 * 
 	 * 
 	 */
-	List<CenterWrap> getFilteredCentersByDistrictId(Integer pincode, String date);
+	List<CenterWrap> getFilteredCentersByDistrictId(Integer district, String date);
 }

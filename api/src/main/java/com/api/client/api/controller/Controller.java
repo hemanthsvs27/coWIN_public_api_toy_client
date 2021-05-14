@@ -20,7 +20,7 @@ public class Controller {
 	Service service;
 	
 	@GetMapping(value = {"/centers/{pincode}", "/centers/{pincode}/{date}"})
-	public List<CenterWrap> get(@PathVariable Integer pincode, @PathVariable(required = false) String date) {
+	public List<CenterWrap> getByPin(@PathVariable Integer pincode, @PathVariable(required = false) String date) {
 		try {
 			List<CenterWrap> centerList =  service.getFilteredCentersByPincode(pincode, date);
 	        return centerList;
@@ -29,6 +29,22 @@ public class Controller {
 	         throw new ResponseStatusException(
 	           HttpStatus.BAD_REQUEST, "Invalid date passed", dte);
 	    }
+		catch (Exception e) {
+			e.printStackTrace();
+			throw new ResponseStatusException(
+					HttpStatus.INTERNAL_SERVER_ERROR, "Unknown exception has occured", e);
+		}
+	}
+	@GetMapping(value = {"/district/{districtId}", "/district/{districtId}/{date}"})
+	public List<CenterWrap> getByDistric(@PathVariable Integer districtId, @PathVariable(required = false) String date) {
+		try {
+			List<CenterWrap> centerList =  service.getFilteredCentersByDistrictId(districtId, date);
+			return centerList;
+		}
+		catch (DateTimeException dte) {
+			throw new ResponseStatusException(
+					HttpStatus.BAD_REQUEST, "Invalid date passed", dte);
+		}
 		catch (Exception e) {
 			e.printStackTrace();
 			throw new ResponseStatusException(
